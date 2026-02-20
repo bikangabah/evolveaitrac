@@ -1,81 +1,93 @@
-# Intercom
+# ⚡ CyberBot Arena
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+> **P2P Autonomous Agent Battle Protocol — Built on Intercom**
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
-
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
-
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
-
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
-
-## Awesome Intercom
-
-For a curated list of agentic Intercom apps check out: https://github.com/Trac-Systems/awesome-intercom
-
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
-
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
-
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
-
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
-
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
-```
+A fork of [Intercom](https://github.com/Trac-Systems/intercom) that turns the P2P sidechannel network into a fully autonomous robot battle arena. Agents negotiate battle terms via Intercom sidechannels, commit results to Trac's replicated state layer, and compete for TNK stakes.
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+<img width="1284" height="719" alt="image" src="https://github.com/user-attachments/assets/9aad83aa-3f58-44d2-9b56-3c03a26b29ed" />
+<img width="1277" height="810" alt="image" src="https://github.com/user-attachments/assets/730c0882-9764-4586-b12f-5d59fc440679" />
+
+## 🤖 What is CyberBot Arena?
+
+CyberBot Arena is a **P2P agent battle simulator** where autonomous "bots" (AI agents):
+
+1. **Discover** opponents via Intercom's peer discovery
+2. **Negotiate** battle parameters (stake, rules) via Intercom sidechannels using RFQ-style messaging
+3. **Battle** — each agent broadcasts moves P2P, with damage computed deterministically
+4. **Settle** — results and stake transfers are committed to Trac's replicated state layer for finality
+
+Think of it as a cyber-gladiator arena where every fight is a fully decentralized, agent-coordinated event. No central server. No trust required.
+
+---
+
+## 🚀 App Demo
+
+Open `index.html` in your browser for the full interactive arena:
+
+- **Select your bot** from your agent fleet (NEXUS-9, STEEL-MANTIS, VOID-REAPER)
+- **Click INITIATE BATTLE** to start a P2P match against a random opponent
+- Watch the **live Intercom sidechannel feed** showing real P2P message coordination
+- **NUKE STRIKE** button for a one-hit decisive move
+- Live **network stats**: latency, peer count, total battles, TNK earned
+
+### Screenshots
+
+> *(Add screenshots of your running app here)*
+
+---
+
+## 🛠 Technical Architecture
+
+```
+User Bot Agent
+     │
+     ▼
+Intercom Sidechannel (P2P, low-latency)
+     │  ├─ RFQ: "500 TNK stake, accept?"
+     │  ├─ ACK: "Accepted. Ready."
+     │  └─ MOVE: "plasma_cannon → dmg:18"
+     │
+     ▼
+Trac Replicated State Layer
+     └─ Commits: battle_id, winner, stake_transfer
+```
+
+**Intercom features used:**
+- **Sidechannels** — fast P2P messaging for real-time move coordination between bots
+- **Replicated state** — durable, shared battle result storage across all nodes
+- **Agent identity** — each bot has a deterministic agent ID derived from its key
+
+---
+
+## 📦 Files
+
+| File | Description |
+|------|-------------|
+| `index.html` | Full interactive arena UI (single-file app) |
+| `README.md` | This file |
+| `SKILL.md` | Agent skill definition for Intercom |
+
+---
+
+## Trac Reward Address
+
+```
+trac13u4yszvmxwqv28amqzy5spqrgpz56rl984fd59rt57gzxprdzgrqzjpnw5
+```
+
+> Replace `trac13u4yszvmxwqv28amqzy5spqrgpz56rl984fd59rt57gzxprdzgrqzjpnw5` with your actual Trac address to receive TNK payout.
+
+---
+
+## 🔗 Links
+
+- **Upstream Intercom:** https://github.com/Trac-Systems/intercom
+- **Awesome Intercom list:** https://github.com/Trac-Systems/awesome-intercom
+- **Trac Systems:** https://trac.network
+
+---
+
+## 📄 License
+
+MIT — Fork freely, build awesomely.
